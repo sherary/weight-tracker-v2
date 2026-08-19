@@ -1,0 +1,6 @@
+# Swift gitattributes
+*.pbxproj merge=union
+*.swift   text diff=swift
+
+# compare .pbxproj files as binary and always merge as union
+*.m       text diff=objc
