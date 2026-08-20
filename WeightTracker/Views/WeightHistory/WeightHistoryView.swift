@@ -6,8 +6,12 @@ struct WeightHistoryView: View {
 
     @State private var errorMessage: String?
     @State private var destinations: HistoryDestination? = nil
-    @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
+    @State private var selectedWeight: Weight?
+    @State private var toggleDeleteAlert: Bool = false
     
+    @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
+
+    // VIEW PROPS
     fileprivate typealias Symbol = (name: String, color: Color)
     fileprivate struct WeightRow: Identifiable {
         let weight: Weight
@@ -41,6 +45,7 @@ struct WeightHistoryView: View {
         
         return symbol
     }
+    // VIEW PROPS
     
     var body: some View {
         Group {
@@ -66,7 +71,7 @@ struct WeightHistoryView: View {
                                 .foregroundStyle(.primary)
                         }
                     }
-                    .padding(.vertical, 16)
+                    .padding(.top, 32)
                     
                     List {
                         ForEach(rows) { row in
@@ -78,11 +83,53 @@ struct WeightHistoryView: View {
                                 color: style.color,
                                 delta: row.delta ?? 0
                             )
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    selectedWeight = getItem(by: row.id)
+                                } label: {
+                                    Image(systemName: "square.and.pencil")
+                                }
+                                .tint(.blue)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    selectedWeight = getItem(by: row.id)
+                                    toggleDeleteAlert.toggle()
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .tint(.red)
+                            }
                         }
                     }
                     .listStyle(.plain)
+                    .alert(
+                        "Delete Item",
+                        isPresented: $toggleDeleteAlert,
+                        actions: {
+                            HStack(alignment: .center) {
+                                Button("Delete", role: .destructive) {
+                                    guard let data = selectedWeight,
+                                        let index = findIndex(id: data.id) else { return }
+                                    
+                                    delete(offsets: IndexSet(integer: index))
+                                    commit()
+                                    
+                                    selectedWeight = nil
+                                    toggleDeleteAlert.toggle()
+                                }
+                                
+                                Button("Cancel", role: .cancel) {
+                                    selectedWeight = nil
+                                    toggleDeleteAlert.toggle()
+                                }
+                            }
+                    }, message: {
+                        if let data = selectedWeight {
+                            Text("Are you sure you want to delete entry @\(data.date, format: .dateTime)?")
+                        }
+                    })
                 }
-                .padding(.horizontal, 16)
                 .sheet(item: $destinations) { destination in
                     Group {
                         switch destination {
@@ -93,10 +140,8 @@ struct WeightHistoryView: View {
                             }
                         case .edit(let data):
                             WeightSheet(id: data.id) { weight in
-                                if let index = weights.firstIndex(where: { $0.id == weight.id }) {
-                                    delete(offsets: IndexSet(integer: index))
-                                    save(data: weight)
-                                    commit()
+                                if let index = findIndex(id: weight.id) {
+          
                                 }
                             }
                         }
@@ -105,10 +150,23 @@ struct WeightHistoryView: View {
                 }
             }
         }
+        .padding(.horizontal, 16)
     }
 }
 
 extension WeightHistoryView {
+    fileprivate func findIndex(id: UUID) -> Int? {
+        return weights.firstIndex(where: { $0.id == id })
+    }
+    
+    fileprivate func getItem(by id: UUID) -> Weight? {
+        if let index = findIndex(id: id) {
+            return weights[index]
+        }
+        
+        return nil
+    }
+    
     fileprivate func save(data: Weight) {
         withAnimation {
             modelContext.insert(data)
