@@ -7,7 +7,7 @@ struct WeightHistoryView: View {
     @State private var errorMessage: String?
     @State private var destinations: HistoryDestination? = nil
     @State private var selectedWeight: Weight?
-    @State private var toggleDeleteAlert: Bool = false
+    @State private var weightToEdit: Weight?
     
     @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
 
@@ -39,13 +39,7 @@ struct WeightHistoryView: View {
                 }
             } else {
                 VStack(alignment: .leading) {
-                    HStack(alignment: .center) {
-                        Text("Weight Histories")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(.primary)
-                        
-                        Spacer()
-                        
+                    InlineTitle(text: "Weight Histories") {
                         Button {
                             destinations = .add
                         } label: {
@@ -68,59 +62,51 @@ struct WeightHistoryView: View {
                                 delta: row.delta ?? 0
                             )
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                Button {
-                                    if let data = getItem(by: row.id) {
-                                        destinations = .edit(data)
+                                SwipableIcon(
+                                    symbol: "square.and.pencil",
+                                    tint: .blue,
+                                    onSave: {
+                                        editById(id: row.id)
                                     }
-                                } label: {
-                                    Image(systemName: "square.and.pencil")
-                                }
-                                .tint(.blue)
+                                )
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button {
-                                    selectedWeight = getItem(by: row.id)
-                                    toggleDeleteAlert.toggle()
-                                } label: {
-                                    Image(systemName: "trash")
-                                }
-                                .tint(.red)
+                                SwipableIcon(
+                                    symbol: "trash",
+                                    tint: .red,
+                                    onSave: {
+                                        selectedWeight = getItem(by: row.id)
+                                    }
+                                )
+                            }
+                            .onTapGesture {
+                                editById(id: row.id)
                             }
                         }
                     }
                     .listStyle(.plain)
-                    .alert(
-                        "Delete Item",
-                        isPresented: $toggleDeleteAlert,
-                        actions: {
-                            HStack(alignment: .center) {
-                                Button("Delete", role: .destructive) {
-                                    guard let data = selectedWeight,
-                                        let index = findIndex(id: data.id) else { return }
-                                    
-                                    delete(offsets: IndexSet(integer: index))
-                                    commit()
-                                    
-                                    selectedWeight = nil
-                                    toggleDeleteAlert.toggle()
-                                }
-                                
-                                Button("Cancel", role: .cancel) {
-                                    selectedWeight = nil
-                                    toggleDeleteAlert.toggle()
-                                }
-                            }
-                    }, message: {
-                        if let data = selectedWeight {
-                            Text("Are you sure you want to delete entry @\(data.date, format: .dateTime)?")
+                    .multipleChoiceAlert(
+                        title: "Delete Item",
+                        data: $selectedWeight,
+                        type: .delete,
+                        onConfirm: deleteAlertOnConfirm,
+                        onCancel: deleteAlertOnCancel,
+                        message: { item in
+                            Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
                         }
-                    })
+                    )
                 }
                 .sheet(item: $destinations) { destination in
                     Group {
                         switch destination {
                         case .add:
                             WeightSheet { weight in
+                                if isExist(by: weight.date) {
+                                    weightToEdit = weight
+                                    
+                                    return
+                                }
+                                
                                 save(data: weight)
                                 commit()
                             }
@@ -130,6 +116,16 @@ struct WeightHistoryView: View {
                     }
                     .padding()
                 }
+                .multipleChoiceAlert(
+                    title: "Cannot Proceed",
+                    data: $weightToEdit,
+                    type: .choice("Change"),
+                    onConfirm: replaceAlertOnConfirm,
+                    onCancel: replaceAlertOnCancel,
+                    message: { item in
+                        Text("Your item for today already exists. Would you like to replace the old one?")
+                    }
+                )
             }
         }
         .padding(.horizontal, 16)
@@ -137,6 +133,57 @@ struct WeightHistoryView: View {
 }
 
 extension WeightHistoryView {
+    fileprivate func editById(id: UUID) {
+        if let data = getItem(by: id) {
+            destinations = .edit(data)
+        }
+    }
+    
+    fileprivate func replaceAlertOnConfirm() {
+        guard let data = weightToEdit else { return }
+        
+        let target = Calendar.current.startOfDay(for: data.date)
+        let descriptor = FetchDescriptor<Weight>(
+            predicate: #Predicate { $0.date == target },
+            sortBy: [SortDescriptor(\.date)]
+        )
+        
+        do {
+            if let item = try modelContext.fetch(descriptor).first {
+                item.value = data.value
+                item.date = data.date
+            } else {
+                save(data: data)
+            }
+            
+            commit()
+        } catch {
+            // I know it's a silent error handling,
+            // which is pointless,
+            // but at this point,
+            // user does not need to know what happened to the data 🤷🏻‍♀️
+            modelContext.rollback()
+        }
+    }
+    
+    fileprivate func replaceAlertOnCancel() {
+        selectedWeight = nil
+    }
+    
+    fileprivate func deleteAlertOnConfirm() {
+        guard let data = selectedWeight,
+            let index = findIndex(id: data.id) else { return }
+        
+        delete(offsets: IndexSet(integer: index))
+        commit()
+        
+        selectedWeight = nil
+    }
+    
+    fileprivate func deleteAlertOnCancel() {
+        selectedWeight = nil
+    }
+    
     fileprivate func findIndex(id: UUID) -> Int? {
         return weights.firstIndex(where: { $0.id == id })
     }
@@ -147,6 +194,12 @@ extension WeightHistoryView {
         }
         
         return nil
+    }
+    
+    fileprivate func isExist(by date: Date) -> Bool {
+        return weights.filter {
+            Calendar.current.isDate($0.date, equalTo: date, toGranularity: .day)
+        }.count > 0
     }
     
     fileprivate func save(data: Weight) {
