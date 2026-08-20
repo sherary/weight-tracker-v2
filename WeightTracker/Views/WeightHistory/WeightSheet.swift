@@ -19,7 +19,7 @@ struct WeightSheet: View {
         fiscalYear.day = 1
         
         guard let startingDate = Calendar.current.date(from: fiscalYear) else {
-            return now...(Calendar.current.date(byAdding: .day, value: 7, to: now) ?? Date.now)
+            return now...Date.now
         }
         
         return startingDate...now
@@ -116,7 +116,7 @@ struct WeightSheet: View {
                         self.errorMessage = nil
                     }
                 )
-            } else if id != nil {
+            } else if errorMessage == nil {
                 form(for: data)
             } else {
                 ProgressView()
