@@ -2,12 +2,16 @@ import SwiftUI
 import SwiftData
 
 struct WeightSheet: View {
-    var id: UUID
+    var id: UUID?
     let onSave: ((Weight) -> Void)?
-    @Environment(\.dismiss) private var dismiss
-    @State private var data: Weight = Weight()
     
-    private let dateRange: ClosedRange<Date> = {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var data: Weight = Weight()
+    @State private var errorMessage: String?
+    
+    private var dateRange: ClosedRange<Date> {
         let now = Date.now
         var fiscalYear = DateComponents()
         fiscalYear.year = Calendar.current.component(.year, from: now)
@@ -19,21 +23,10 @@ struct WeightSheet: View {
         }
         
         return startingDate...now
-    }()
-    
-    init(id: UUID? = nil, onSave: @escaping (Weight) -> Void) {
-        if let id = id {
-            self.id = id
-            _data = State(initialValue: Weight())
-            self.onSave = onSave
-        } else {
-            self.id = UUID()
-            self.onSave = onSave
-        }
     }
     
-    var body: some View {
-        VStack(alignment: .leading) {
+    private func form(for data: Weight) -> some View {
+        return VStack(alignment: .leading) {
             Text("Weight Form")
                 .font(.system(size: 24, weight: .bold))
                 .padding(.bottom, 16)
@@ -78,10 +71,10 @@ struct WeightSheet: View {
                         in: dateRange,
                         displayedComponents: .date
                     )
-                        .labelsHidden()
-                        .fixedSize()
-                        .scaleEffect(x: proxy.size.width, y: proxy.size.height / 34, anchor: .center)
-                        .opacity(0.011)
+                    .labelsHidden()
+                    .fixedSize()
+                    .scaleEffect(x: proxy.size.width, y: proxy.size.height / 34, anchor: .center)
+                    .opacity(0.011)
                 }
                 .frame(height: 48)
                 .contentShape(Rectangle())
@@ -111,5 +104,55 @@ struct WeightSheet: View {
         }
         .presentationDetents([.fraction(0.7)])
         .presentationBackground(Color.white)
+    }
+    
+    var body: some View {
+        Group {
+            if id != nil,
+               let errorMessage = errorMessage {
+                ErrorView(
+                    text: errorMessage,
+                    onButtonTap: {
+                        self.errorMessage = nil
+                    }
+                )
+            } else if id != nil {
+                form(for: data)
+            } else {
+                ProgressView()
+            }
+        }
+        .task {
+            guard let id else {
+                data = Weight(id: UUID())
+                
+                return
+            }
+            
+            let queryResponse = findItem(with: id)
+            switch queryResponse {
+            case .success(let responseData):
+                if let weight = responseData {
+                    data = weight
+                }
+            case .failure(let err):
+                errorMessage = err.localizedDescription
+            }
+        }
+    }
+}
+
+extension WeightSheet {
+    private func findItem(with id: UUID) -> Result<Weight?, Error> {
+        var descriptor = FetchDescriptor<Weight>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        
+        do {
+            let item = try modelContext.fetch(descriptor)
+            
+            return .success(item.first)
+        } catch {
+            return .failure(error)
+        }
     }
 }

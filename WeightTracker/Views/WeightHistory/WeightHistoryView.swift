@@ -29,22 +29,6 @@ struct WeightHistoryView: View {
             return WeightRow(weight: weight, delta: delta)
         }
     }
-    
-    fileprivate func indicator(for delta: Double) -> Symbol {
-        var symbol = Symbol(name: "square.fill", color: .secondary)
-        
-        if delta > 0 {
-            symbol.name = "arrowtriangle.up.fill"
-            symbol.color = .red
-        }
-        
-        if delta < 0 {
-            symbol.name = "arrowtriangle.down.fill"
-            symbol.color = .green
-        }
-        
-        return symbol
-    }
     // VIEW PROPS
     
     var body: some View {
@@ -85,7 +69,9 @@ struct WeightHistoryView: View {
                             )
                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                 Button {
-                                    selectedWeight = getItem(by: row.id)
+                                    if let data = getItem(by: row.id) {
+                                        destinations = .edit(data)
+                                    }
                                 } label: {
                                     Image(systemName: "square.and.pencil")
                                 }
@@ -139,11 +125,7 @@ struct WeightHistoryView: View {
                                 commit()
                             }
                         case .edit(let data):
-                            WeightSheet(id: data.id) { weight in
-                                if let index = findIndex(id: weight.id) {
-          
-                                }
-                            }
+                            WeightSheet(id: data.id, onSave: nil)
                         }
                     }
                     .padding()
@@ -189,6 +171,22 @@ extension WeightHistoryView {
             
             return
         }
+    }
+    
+    fileprivate func indicator(for delta: Double) -> Symbol {
+        var symbol = Symbol(name: "square.fill", color: .secondary)
+        
+        if delta > 0 {
+            symbol.name = "arrowtriangle.up.fill"
+            symbol.color = .red
+        }
+        
+        if delta < 0 {
+            symbol.name = "arrowtriangle.down.fill"
+            symbol.color = .green
+        }
+        
+        return symbol
     }
 }
 
