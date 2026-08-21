@@ -103,7 +103,7 @@ struct WeightSheet: View {
             .padding(.vertical, 16)
         }
         .presentationDetents([.fraction(0.7)])
-        .presentationBackground(Color.white)
+        .presentationBackground(Color(.systemBackground)) 
     }
     
     var body: some View {
@@ -154,5 +154,11 @@ extension WeightSheet {
         } catch {
             return .failure(error)
         }
+    }
+}
+
+#Preview {
+    WeightSheet { item in
+        
     }
 }
