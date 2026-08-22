@@ -30,3 +30,19 @@ enum AlertType {
         }
     }
 }
+
+enum DataFilter: Int, CaseIterable {
+    case weekly = 0, monthly, yearly
+    
+    var title: String {
+        switch self {
+        case .weekly: return "Weekly"
+        case .monthly: return "Monthly"
+        case .yearly: return "Yearly"
+        }
+    }
+    
+    var value: Int {
+        return self.rawValue
+    }
+}

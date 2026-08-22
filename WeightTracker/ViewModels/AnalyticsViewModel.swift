@@ -23,7 +23,7 @@ final class AnalyticsViewModel: ObservableObject {
     }
     
     func getDateRange(for date: Date = Date.now) {
-        guard let weeklyDateRange = Calendars.getISO8601WeeklyDateRange(for: date) else {
+        guard let weeklyDateRange = CalendarService.ISO8601.getWeeklyDateRange(for: date) else {
             return
         }
         

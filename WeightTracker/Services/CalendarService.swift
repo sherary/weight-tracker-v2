@@ -1,0 +1,42 @@
+import Foundation
+
+struct CalendarService {
+    internal static func getGregorianWeeklyDateRange(for date: Date = Date()) -> DateInterval? {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 1
+        
+        return calendar.dateInterval(of: .weekOfYear, for: date)
+    }
+    
+    struct ISO8601 {
+        private static var calendar = Calendar(identifier: .iso8601)
+
+        init() {
+            CalendarService.ISO8601.calendar.timeZone = TimeZone.current
+        }
+        
+        internal static func getWeeklyDateRange(for date: Date = Date.now) -> DateInterval? {
+            guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: date),
+                  let weekEnd = calendar.date(byAdding: .second, value: -1, to: weekStart.end)
+            else { return nil }
+            
+            return DateInterval(start: weekStart.start, end: weekEnd)
+        }
+        
+        internal static func getMonthlyDateRange(for date: Date = Date.now) -> DateInterval? {
+            guard let startDate = calendar.date(from: calendar.dateComponents([.year, .month], from: date)),
+                  let endDate = calendar.date(byAdding: .init(month: 1, second: -1), to: startDate)
+            else { return nil }
+            
+            return DateInterval(start: startDate, end: endDate)
+        }
+        
+        internal static func getYearlyDateRange(for date: Date = Date.now) -> DateInterval? {
+            guard let startDate = calendar.date(from: calendar.dateComponents([.year], from: date)),
+                  let endDate = calendar.date(byAdding: .init(year: 1, second: -1), to: startDate)
+            else { return nil }
+            
+            return DateInterval(start: startDate, end: endDate)
+        }
+    }
+}

@@ -3,14 +3,11 @@ import SwiftData
 
 struct WeightHistoryView: View {
     @Environment(\.modelContext) private var modelContext
-
-    @State private var errorMessage: String?
-    @State private var destinations: HistoryDestination? = nil
-    @State private var selectedWeight: Weight?
-    @State private var weightToEdit: Weight?
+    @Query(sort: \Weight.date, order: .reverse) private var weightHistories: [Weight]
     
-    @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
-
+    @State private var vm = WeightHistoryViewModel()
+    @State private var destinations: HistoryDestination? = nil
+    
     // VIEW PROPS
     fileprivate typealias Symbol = (name: String, color: Color)
     fileprivate struct WeightRow: Identifiable {
@@ -29,13 +26,20 @@ struct WeightHistoryView: View {
             return WeightRow(weight: weight, delta: delta)
         }
     }
+    
+    private var weights: [Weight] {
+        let start = vm.dateRange.start
+        let end = vm.dateRange.end
+        
+        return weightHistories.filter { $0.date >= start && $0.date < end }
+    }
     // VIEW PROPS
     
     var body: some View {
         Group {
-            if let message = errorMessage, !message.isEmpty {
+            if let message = vm.errorMessage, !message.isEmpty {
                 ErrorView(text: message) {
-                    errorMessage = nil
+                    vm.errorMessage = nil
                 }
             } else {
                 VStack(alignment: .leading) {
@@ -50,6 +54,13 @@ struct WeightHistoryView: View {
                         }
                     }
                     .padding(.top, 32)
+                    
+                    Picker("Filter", selection: $vm.selectedFilter) {
+                        ForEach(DataFilter.allCases, id: \.self) { filter in
+                            Text(filter.title).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                     
                     List {
                         ForEach(rows) { row in
@@ -75,7 +86,7 @@ struct WeightHistoryView: View {
                                     symbol: "trash",
                                     tint: .red,
                                     onSave: {
-                                        selectedWeight = getItem(by: row.id)
+                                        vm.selectedWeight = getItem(by: row.id)
                                     }
                                 )
                             }
@@ -87,7 +98,7 @@ struct WeightHistoryView: View {
                     .listStyle(.plain)
                     .multipleChoiceAlert(
                         title: "Delete Item",
-                        data: $selectedWeight,
+                        data: $vm.selectedWeight,
                         type: .delete,
                         onConfirm: deleteAlertOnConfirm,
                         onCancel: deleteAlertOnCancel,
@@ -102,7 +113,7 @@ struct WeightHistoryView: View {
                         case .add:
                             WeightSheet { weight in
                                 if isExist(by: weight.date) {
-                                    weightToEdit = weight
+                                    vm.weightToEdit = weight
                                     
                                     return
                                 }
@@ -118,7 +129,7 @@ struct WeightHistoryView: View {
                 }
                 .multipleChoiceAlert(
                     title: "Cannot Proceed",
-                    data: $weightToEdit,
+                    data: $vm.weightToEdit,
                     type: .choice("Change"),
                     onConfirm: replaceAlertOnConfirm,
                     onCancel: replaceAlertOnCancel,
@@ -140,7 +151,7 @@ extension WeightHistoryView {
     }
     
     fileprivate func replaceAlertOnConfirm() {
-        guard let data = weightToEdit else { return }
+        guard let data = vm.weightToEdit else { return }
         
         let target = Calendar.current.startOfDay(for: data.date)
         let descriptor = FetchDescriptor<Weight>(
@@ -167,21 +178,21 @@ extension WeightHistoryView {
     }
     
     fileprivate func replaceAlertOnCancel() {
-        selectedWeight = nil
+        vm.selectedWeight = nil
     }
     
     fileprivate func deleteAlertOnConfirm() {
-        guard let data = selectedWeight,
+        guard let data = vm.selectedWeight,
             let index = findIndex(id: data.id) else { return }
         
         delete(offsets: IndexSet(integer: index))
         commit()
         
-        selectedWeight = nil
+        vm.selectedWeight = nil
     }
     
     fileprivate func deleteAlertOnCancel() {
-        selectedWeight = nil
+        vm.selectedWeight = nil
     }
     
     fileprivate func findIndex(id: UUID) -> Int? {
@@ -197,9 +208,13 @@ extension WeightHistoryView {
     }
     
     fileprivate func isExist(by date: Date) -> Bool {
-        return weights.filter {
-            Calendar.current.isDate($0.date, equalTo: date, toGranularity: .day)
-        }.count > 0
+        return weightHistories.contains {
+            Calendar.current.isDate(
+                $0.date,
+                equalTo: date,
+                toGranularity: .day
+            )
+        }
     }
     
     fileprivate func save(data: Weight) {
@@ -220,7 +235,7 @@ extension WeightHistoryView {
         do {
             try modelContext.save()
         } catch {
-            errorMessage = error.localizedDescription
+            vm.errorMessage = error.localizedDescription
             
             return
         }

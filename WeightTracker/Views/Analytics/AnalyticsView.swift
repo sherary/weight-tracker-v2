@@ -6,14 +6,7 @@ struct AnalyticsView: View {
     @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
     @Environment(\.modelContext) private var modelContext
     @StateObject private var vm = AnalyticsViewModel()
-        
-    private let dateFormat: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM dd"
-        
-        return formatter
-    }()
-    
+
     var body: some View {
         VStack {
             InlineTitle(text: "Analytics") {}
@@ -56,7 +49,7 @@ struct AnalyticsView: View {
     private func chartTitle(weeklyRange: DateInterval) -> some View {
         return HStack {
             VStack(alignment: .leading) {
-                Text("\(weeklyRange.start, formatter: dateFormat) - \(weeklyRange.end, formatter: dateFormat)")
+                Text("\(weeklyRange.start, formatter: FormatterService.Date.shortMonth) - \(weeklyRange.end, formatter: FormatterService.Date.shortMonth)")
                     .font(.headline)
                     .foregroundStyle(.primary)
                 Text("Weight fluctuations during the week")
