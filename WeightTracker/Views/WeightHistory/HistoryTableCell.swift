@@ -25,7 +25,7 @@ struct HistoryTableCell: View {
                 Text("\(data.value, format: .number.precision(.fractionLength(2))) kg")
                     .font(.system(size: 24, weight: .bold))
                 
-                Text("@\(data.date, format: .dateTime)")
+                Text("@\(data.date, formatter: FormatterService.Date.longMonth)")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
