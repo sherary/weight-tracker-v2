@@ -3,91 +3,91 @@ import SwiftData
 import Charts
 
 struct AnalyticsView: View {
-    @Query(sort: \Weight.date, order: .reverse) private var weights: [Weight]
+    @Query(sort: \Weight.date, order: .reverse) private var weightHistory: [Weight]
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var vm = AnalyticsViewModel()
+    @State private var vm = AnalyticsViewModel()
 
     var body: some View {
         VStack {
             InlineTitle(text: "Analytics") {}
                 .padding(.top, 32)
 
+            Picker("Filter", selection: $vm.selectedFilter) {
+                ForEach(DataFilter.allCases, id: \.self) { filter in
+                    Text(filter.title).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            
             Card(spacing: 24) {
-                if vm.weeklyDateRange != DateInterval(start: .now, end: .now) {
-                    chartTitle(weeklyRange: vm.weeklyDateRange)
+                if vm.dateRange != DateInterval(start: .now, end: .now) {
+                    ChartTitle(
+                        dateRange: vm.dateRange,
+                        period: vm.selectedFilter
+                    )
                 }
                 
-                if let data = vm.chartData {
-                    BarChart(data: data, dateRange: vm.weeklyDateRange)
+                if let chartPoints = vm.chartPoints,
+                    !chartPoints.isEmpty
+                {
+                    BarChart(
+                        data: chartPoints,
+                        period: vm.selectedFilter
+                    )
                 }
             }
             
-            metricCard
+            MetricsCard(
+                total: vm.totalWeight ?? 0,
+                average: vm.averageWeight ?? 0
+            )
             
             Spacer()
+            
+            #if DEBUG
+            HStack(alignment: .center) {
+                Button("Seed") {
+                    modelContext.seedYearOfWeights()
+                    reloadData()
+                }
+                .tint(.blue)
+                
+                Button("Clear") {
+                    modelContext.deleteAllWeights()
+                    reloadData()
+                }
+                .tint(.red)
+            }
+            #endif
         }
         .padding(.horizontal, 16)
         .task {
-            vm.getDateRange()
-            let fetchData = getItems()
-            
-            switch fetchData {
-            case .success(let data):
-                if let data = data {
-                    vm.chartData = vm.transForm(data: data)
-                    vm.totalWeight = vm.getTotalWeight(for: data)
-                    
-                    guard let totalWeight = vm.totalWeight else { return }
-                    vm.averageWeight = vm.getAverage(for: totalWeight)
-                }
-            case .failure(let err):
-                vm.errorMessage = err.localizedDescription
-            }
+            reloadData()
         }
-    }
-      
-    private func chartTitle(weeklyRange: DateInterval) -> some View {
-        return HStack {
-            VStack(alignment: .leading) {
-                Text("\(weeklyRange.start, formatter: FormatterService.Date.shortMonth) - \(weeklyRange.end, formatter: FormatterService.Date.shortMonth)")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("Weight fluctuations during the week")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            
-            Spacer()
-        }
-    }
-    
-    private var metricCard: some View {
-        return HStack(alignment: .center) {
-            Card {
-                Text("Total")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text(vm.totalWeight ?? 0, format: .number.precision(.fractionLength(2)))
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
-            
-            Card {
-                Text("Average")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                Text(vm.averageWeight ?? 0, format: .number.precision(.fractionLength(2)))
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.primary)
-            }
+        .onChange(of: vm.dateRange) {
+            reloadData()
         }
     }
 }
 
 extension AnalyticsView {
+    private func reloadData() {
+        let fetchData = getItems()
+        
+        switch fetchData {
+        case .success(let data):
+            if let data = data {
+                vm.setWeights(with: data)
+            }
+        case .failure(let err):
+            vm.errorMessage = err.localizedDescription
+        }
+    }
+    
     private func getItems() -> Result<[Weight]?, Error> {
-        let startDate = vm.weeklyDateRange.start
-        let endDate = vm.weeklyDateRange.end
+        let startDate = vm.dateRange.start
+        let endDate = vm.dateRange.end
+        
         let descriptor = FetchDescriptor<Weight>(
             predicate: #Predicate { $0.date >= startDate && $0.date < endDate },
             sortBy: [SortDescriptor(\.date)]

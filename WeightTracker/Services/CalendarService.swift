@@ -1,11 +1,14 @@
 import Foundation
 
 struct CalendarService {
-    internal static func getGregorianWeeklyDateRange(for date: Date = Date()) -> DateInterval? {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.firstWeekday = 1
+    struct Gregorian {
+        private static var calendar = Calendar(identifier: .gregorian)
         
-        return calendar.dateInterval(of: .weekOfYear, for: date)
+        internal static func getWeeklyDateRange(for date: Date = Date.now) -> DateInterval? {
+            calendar.firstWeekday = 1
+            
+            return calendar.dateInterval(of: .weekOfYear, for: date)
+        }
     }
     
     struct ISO8601 {
@@ -13,6 +16,10 @@ struct CalendarService {
 
         init() {
             CalendarService.ISO8601.calendar.timeZone = TimeZone.current
+        }
+        
+        internal static func getYear(of date: Date = Date.now) -> Int {
+            return calendar.component(.year, from: date)
         }
         
         internal static func getWeeklyDateRange(for date: Date = Date.now) -> DateInterval? {
