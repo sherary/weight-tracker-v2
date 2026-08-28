@@ -31,7 +31,7 @@ enum AlertType {
     }
 }
 
-enum DataFilter: Int, CaseIterable {
+enum Period: Int, CaseIterable {
     case weekly = 0, monthly, yearly
     
     var title: String {

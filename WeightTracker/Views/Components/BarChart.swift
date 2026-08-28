@@ -3,7 +3,7 @@ import Charts
 
 struct BarChart: View {
     let data: [ChartPoint]
-    let period: DataFilter
+    let period: Period
     
     private var labels: ChartAxisLabels {
         let y = AxisLabelY.weight

@@ -1,4 +1,3 @@
-//import Combine
 import Foundation
 
 @Observable
@@ -6,7 +5,7 @@ final class WeightHistoryViewModel {
     var selectedWeight: Weight?
     var weightToEdit: Weight?
     var errorMessage: String?
-    var selectedFilter: DataFilter = .weekly {
+    var period: Period = .weekly {
         didSet {
             calculateDateRange()
         }
@@ -24,7 +23,7 @@ final class WeightHistoryViewModel {
     }
     
     private func getDateRange(for date: Date = Date.now) -> DateInterval? {
-        switch selectedFilter {
+        switch period {
         case .weekly: return CalendarService.ISO8601.getWeeklyDateRange(for: date)
         case .monthly: return CalendarService.ISO8601.getMonthlyDateRange(for: date)
         case .yearly: return CalendarService.ISO8601.getYearlyDateRange(for: date)

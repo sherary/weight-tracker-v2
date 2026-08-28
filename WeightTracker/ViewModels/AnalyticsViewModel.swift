@@ -7,7 +7,7 @@ final class AnalyticsViewModel {
     var errorMessage: String?
     var totalWeight: Double? = 0
     var averageWeight: Double? = 0
-    var selectedFilter: DataFilter = .weekly {
+    var period: Period = .weekly {
         didSet {
             calculateDateRange()
         }
@@ -38,7 +38,7 @@ final class AnalyticsViewModel {
     }
     
     private func getDateRange(for date: Date = Date.now) -> DateInterval? {
-        switch selectedFilter {
+        switch period {
         case .weekly: return CalendarService.ISO8601.getWeeklyDateRange(for: date)
         case .monthly: return CalendarService.ISO8601.getMonthlyDateRange(for: date)
         case .yearly: return CalendarService.ISO8601.getYearlyDateRange(for: date)
@@ -50,7 +50,7 @@ final class AnalyticsViewModel {
     }
     
     private func setAverageWeight(from total: Double, weights: [Weight]) {
-        switch selectedFilter {
+        switch period {
         case .weekly:
             self.averageWeight = getAverage(for: total, denominator: weights.count)
         case .monthly:
@@ -73,7 +73,7 @@ final class AnalyticsViewModel {
     }
     
     private func setChartPoints(with data: [Weight]) {
-        switch selectedFilter {
+        switch period {
         case .weekly:
             self.chartPoints = transForm(data: data)
         case .monthly:

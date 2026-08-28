@@ -55,57 +55,63 @@ struct WeightHistoryView: View {
                     }
                     .padding(.top, 32)
                     
-                    Picker("Filter", selection: $vm.selectedFilter) {
-                        ForEach(DataFilter.allCases, id: \.self) { filter in
+                    Picker("Filter", selection: $vm.period) {
+                        ForEach(Period.allCases, id: \.self) { filter in
                             Text(filter.title).tag(filter)
                         }
                     }
                     .pickerStyle(.segmented)
                     
-                    List {
-                        ForEach(rows) { row in
-                            let style = indicator(for: row.delta ?? 0)
-                            
-                            HistoryTableCell(
-                                data: row.weight,
-                                symbol: style.name,
-                                color: style.color,
-                                delta: row.delta ?? 0
-                            )
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                SwipableIcon(
-                                    symbol: "square.and.pencil",
-                                    tint: .blue,
-                                    onSave: {
-                                        editById(id: row.id)
-                                    }
+                    if !rows.isEmpty {
+                        List {
+                            ForEach(rows) { row in
+                                let style = indicator(for: row.delta ?? 0)
+                                
+                                HistoryTableCell(
+                                    data: row.weight,
+                                    symbol: style.name,
+                                    color: style.color,
+                                    delta: row.delta ?? 0
                                 )
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    SwipableIcon(
+                                        symbol: "square.and.pencil",
+                                        tint: .blue,
+                                        onSave: {
+                                            editById(id: row.id)
+                                        }
+                                    )
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    SwipableIcon(
+                                        symbol: "trash",
+                                        tint: .red,
+                                        onSave: {
+                                            vm.selectedWeight = getItem(by: row.id)
+                                        }
+                                    )
+                                }
+                                .onTapGesture {
+                                    editById(id: row.id)
+                                }
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                SwipableIcon(
-                                    symbol: "trash",
-                                    tint: .red,
-                                    onSave: {
-                                        vm.selectedWeight = getItem(by: row.id)
-                                    }
-                                )
+                        }
+                        .listStyle(.plain)
+                        .multipleChoiceAlert(
+                            title: "Delete Item",
+                            data: $vm.selectedWeight,
+                            type: .delete,
+                            onConfirm: deleteAlertOnConfirm,
+                            onCancel: deleteAlertOnCancel,
+                            message: { item in
+                                Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
                             }
-                            .onTapGesture {
-                                editById(id: row.id)
-                            }
+                        )
+                    } else {
+                        EmptyListView {
+                            destinations = .add
                         }
                     }
-                    .listStyle(.plain)
-                    .multipleChoiceAlert(
-                        title: "Delete Item",
-                        data: $vm.selectedWeight,
-                        type: .delete,
-                        onConfirm: deleteAlertOnConfirm,
-                        onCancel: deleteAlertOnCancel,
-                        message: { item in
-                            Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
-                        }
-                    )
                 }
                 .sheet(item: $destinations) { destination in
                     Group {

@@ -3,6 +3,8 @@ import SwiftData
 import Charts
 
 struct AnalyticsView: View {
+    var onEmptyView: (() -> Void)?
+    
     @Query(sort: \Weight.date, order: .reverse) private var weightHistory: [Weight]
     @Environment(\.modelContext) private var modelContext
     @State private var vm = AnalyticsViewModel()
@@ -12,39 +14,41 @@ struct AnalyticsView: View {
             InlineTitle(text: "Analytics") {}
                 .padding(.top, 32)
 
-            Picker("Filter", selection: $vm.selectedFilter) {
-                ForEach(DataFilter.allCases, id: \.self) { filter in
+            Picker("Filter", selection: $vm.period) {
+                ForEach(Period.allCases, id: \.self) { filter in
                     Text(filter.title).tag(filter)
                 }
             }
             .pickerStyle(.segmented)
             
-            Card(spacing: 24) {
-                if vm.dateRange != DateInterval(start: .now, end: .now) {
+            if let chartPoints = vm.chartPoints {
+                Card(spacing: 24) {
                     ChartTitle(
                         dateRange: vm.dateRange,
-                        period: vm.selectedFilter
+                        period: vm.period
+                    )
+                    
+                    BarChart(
+                        data: chartPoints,
+                        period: vm.period
                     )
                 }
                 
-                if let chartPoints = vm.chartPoints,
-                    !chartPoints.isEmpty
-                {
-                    BarChart(
-                        data: chartPoints,
-                        period: vm.selectedFilter
-                    )
+                MetricsCard(
+                    total: vm.totalWeight ?? 0,
+                    average: vm.averageWeight ?? 0
+                )
+            } else {
+                EmptyAnalyticsView {
+                    if let onEmptyView = onEmptyView {
+                        onEmptyView()
+                    }
                 }
             }
             
-            MetricsCard(
-                total: vm.totalWeight ?? 0,
-                average: vm.averageWeight ?? 0
-            )
-            
             Spacer()
             
-            #if DEBUG
+            #if DEBUG && targetEnvironment(simulator)
             HStack(alignment: .center) {
                 Button("Seed") {
                     modelContext.seedYearOfWeights()

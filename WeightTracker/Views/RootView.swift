@@ -6,7 +6,9 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Analytics", systemImage: "cellularbars", value: 0) {
-                AnalyticsView()
+                AnalyticsView(onEmptyView: {
+                    selectedTab = 1
+                })
             }
             
             Tab("Histories", systemImage: "list.bullet", value: 1) {
