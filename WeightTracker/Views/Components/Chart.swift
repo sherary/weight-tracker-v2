@@ -3,15 +3,24 @@ import Charts
 
 struct BarChart: View {
     let data: [ChartPoint]
-    var dateRange: DateInterval = .init(start: .now, end: .now)
+    let period: DataFilter
+    
+    private var labels: ChartAxisLabels {
+        let y = AxisLabelY.weight
+        switch period {
+        case .weekly:  return ChartAxisLabels(x: .week,  y: y)
+        case .monthly: return ChartAxisLabels(x: .month, y: y)
+        case .yearly:  return ChartAxisLabels(x: .year,  y: y)
+        }
+    }
     
     var body: some View {
         Chart {
             ForEach(data) { item in
                 BarMark(
-                    x: .value("Date", item.date, unit: .day),
-                    y: .value("Weight", item.value),
-                    width: .ratio(0.5)
+                    x: .value(labels.x.description, item.label),
+                    y: .value(labels.y.description, item.value),
+                    width: .ratio(0.8)
                 )
                 .foregroundStyle(
                     .linearGradient(
@@ -22,13 +31,7 @@ struct BarChart: View {
                 )
             }
         }
-        .chartXAxis {
-            AxisMarks(values: .stride(by: .day)) { value in
-                AxisGridLine()
-                AxisValueLabel(format: .dateTime.day().month(.abbreviated))
-            }
-        }
-        .chartXScale(domain: dateRange.start...dateRange.end)
+        .chartXScale(domain: data.map(\.label))
         .chartYAxis {
             AxisMarks { value in
                 AxisGridLine()
