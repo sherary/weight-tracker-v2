@@ -4,6 +4,10 @@ struct FormatterService {
     struct Date {
         private static let formatter = DateFormatter()
         
+        init() {
+            FormatterService.Date.formatter.locale = Locale(identifier: "id_ID")
+        }
+        
         static let shortMonth: DateFormatter = {
             formatter.dateFormat = "MMM dd"
             
