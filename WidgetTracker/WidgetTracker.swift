@@ -1,88 +1,100 @@
-//
-//  WidgetTracker.swift
-//  WidgetTracker
-//
-//  Created by Sherary Apriliana on 28/08/26.
-//
-
 import WidgetKit
+import AppIntents
 import SwiftUI
+import SwiftData
 
-struct Provider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
-    }
-
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
-    }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
-
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
-        }
-
-        return Timeline(entries: entries, policy: .atEnd)
-    }
-
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
-}
-
-struct SimpleEntry: TimelineEntry {
-    let date: Date
-    let configuration: ConfigurationAppIntent
-}
-
-struct WidgetTrackerEntryView : View {
-    var entry: Provider.Entry
+struct WeightTrackerWidgetView : View {
+    var entry: WeightTrackerWidgetEntry
 
     var body: some View {
-        VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
-
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+        if entry.size == .systemMedium {
+            VStack(alignment: .center) {
+                Text("Add new record for today's weight")
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                
+                HStack(alignment: .center) {
+                    Button(intent: AdjustWeightIntent(delta: -0.1)) {
+                        Image(systemName: "minus")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16, alignment: .center)
+                    }
+                    
+                    Text(entry.value, format: .number.precision(.fractionLength(2)))
+                        .font(.title)
+                        .foregroundStyle(.primary)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(.gray, lineWidth: 1)
+                        )
+                    
+                    Button(intent: AdjustWeightIntent(delta: 0.1)) {
+                        Image(systemName: "plus")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16, alignment: .center)
+                    }
+                }
+                
+                Text("kg")
+            }
+            .containerBackground(.fill.tertiary, for: .widget)
         }
     }
 }
 
-struct WidgetTracker: Widget {
-    let kind: String = "WidgetTracker"
-
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
-            WidgetTrackerEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
-        }
-    }
+struct WeightTrackerWidgetEntry: TimelineEntry {
+    var date: Date
+    var value: Double
+    var size: WidgetFamily? = .systemMedium
 }
 
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
+struct WeightTrackerTimelineProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> WeightTrackerWidgetEntry {
+        WeightTrackerWidgetEntry(date: .now, value: 0)
     }
     
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
+    func snapshot(for configuration: WeightTrackerWidgetConfiguration, in context: Context) async -> WeightTrackerWidgetEntry {
+        WeightTrackerWidgetEntry(date: .now, value: 0.5)
+    }
+    
+    func timeline(for configuration: WeightTrackerWidgetConfiguration, in context: Context) async -> Timeline<WeightTrackerWidgetEntry> {
+        let modelContext = ModelContext(PersistenceController.sharedModelContainerV2)
+        let store = WeightStore(modelContext: modelContext)
+        var entry = WeightTrackerWidgetEntry(date: .now, value: 0)
+        if let lastWeight = store.lastRecord {
+            entry.date = .now
+            entry.value = lastWeight.value
+        }
+        
+        let midnight = CalendarService.ISO8601.getMidnightTime(for: .now)
+        return Timeline(entries: [entry], policy: .after(midnight))
     }
 }
 
-#Preview(as: .systemSmall) {
-    WidgetTracker()
+struct WeightTrackerWidget: Widget {
+    let kind: String = "WeightTrackerWidget"
+    
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(
+            kind: kind,
+            intent: WeightTrackerWidgetConfiguration.self,
+            provider: WeightTrackerTimelineProvider()
+        ) {
+            entry in
+            WeightTrackerWidgetView(entry: entry)
+        }
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+#Preview(as: .systemMedium) {
+    WeightTrackerWidget()
 } timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
+    WeightTrackerWidgetEntry(date: .now, value: 56.5)
+    WeightTrackerWidgetEntry(date: .now, value: 56.1)
 }

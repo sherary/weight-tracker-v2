@@ -1,77 +1,21 @@
-//
-//  WidgetTrackerControl.swift
-//  WidgetTracker
-//
-//  Created by Sherary Apriliana on 28/08/26.
-//
-
 import AppIntents
 import SwiftUI
-import WidgetKit
 
-struct WidgetTrackerControl: ControlWidget {
-    static let kind: String = "com.ashe-elea.WeightTracker.WidgetTracker"
-
-    var body: some ControlWidgetConfiguration {
-        AppIntentControlConfiguration(
-            kind: Self.kind,
-            provider: Provider()
-        ) { value in
-            ControlWidgetToggle(
-                "Start Timer",
-                isOn: value.isRunning,
-                action: StartTimerIntent(value.name)
-            ) { isRunning in
-                Label(isRunning ? "On" : "Off", systemImage: "timer")
-            }
-        }
-        .displayName("Timer")
-        .description("A an example control that runs a timer.")
+struct AdjustWeightIntent: AppIntent {
+    static let title: LocalizedStringResource = "Adjust Weight"
+    
+    @Parameter(title: "Delta")
+    var delta: Double
+    
+    init() {
+        self.delta = 0
     }
-}
-
-extension WidgetTrackerControl {
-    struct Value {
-        var isRunning: Bool
-        var name: String
+    
+    init(delta: Double) {
+        self.delta = delta
     }
-
-    struct Provider: AppIntentControlValueProvider {
-        func previewValue(configuration: TimerConfiguration) -> Value {
-            WidgetTrackerControl.Value(isRunning: false, name: configuration.timerName)
-        }
-
-        func currentValue(configuration: TimerConfiguration) async throws -> Value {
-            let isRunning = true // Check if the timer is running
-            return WidgetTrackerControl.Value(isRunning: isRunning, name: configuration.timerName)
-        }
-    }
-}
-
-struct TimerConfiguration: ControlConfigurationIntent {
-    static let title: LocalizedStringResource = "Timer Name Configuration"
-
-    @Parameter(title: "Timer Name", default: "Timer")
-    var timerName: String
-}
-
-struct StartTimerIntent: SetValueIntent {
-    static let title: LocalizedStringResource = "Start a timer"
-
-    @Parameter(title: "Timer Name")
-    var name: String
-
-    @Parameter(title: "Timer is running")
-    var value: Bool
-
-    init() {}
-
-    init(_ name: String) {
-        self.name = name
-    }
-
+    
     func perform() async throws -> some IntentResult {
-        // Start the timer…
-        return .result()
+        return .result(value: delta)
     }
 }

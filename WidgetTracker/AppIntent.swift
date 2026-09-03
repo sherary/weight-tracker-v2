@@ -1,18 +1,9 @@
-//
-//  AppIntent.swift
-//  WidgetTracker
-//
-//  Created by Sherary Apriliana on 28/08/26.
-//
-
-import WidgetKit
 import AppIntents
 
-struct ConfigurationAppIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Configuration" }
-    static var description: IntentDescription { "This is an example widget." }
-
-    // An example configurable parameter.
-    @Parameter(title: "Favorite Emoji", default: "😃")
-    var favoriteEmoji: String
+struct WeightTrackerWidgetConfiguration: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Weight Tracker Configuration Intent"
+    static let description: IntentDescription = IntentDescription("Choose step size")
+    
+    @Parameter(title: "Step size", default: 0.1)
+    var step: Double
 }
