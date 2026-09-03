@@ -8,6 +8,10 @@ struct WeightHistoryView: View {
     @State private var vm = WeightHistoryViewModel()
     @State private var destinations: HistoryDestination? = nil
     
+    private var weightStore: WeightStore {
+        WeightStore(modelContext: modelContext)
+    }
+    
     // VIEW PROPS
     fileprivate typealias Symbol = (name: String, color: Color)
     fileprivate struct WeightRow: Identifiable {
@@ -87,7 +91,9 @@ struct WeightHistoryView: View {
                                         symbol: "trash",
                                         tint: .red,
                                         onSave: {
-                                            vm.selectedWeight = getItem(by: row.id)
+                                            if let item = getItem(by: row.id) {
+                                                setSelectedWeight(with: item)
+                                            }
                                         }
                                     )
                                 }
@@ -102,7 +108,9 @@ struct WeightHistoryView: View {
                             data: $vm.selectedWeight,
                             type: .delete,
                             onConfirm: deleteAlertOnConfirm,
-                            onCancel: deleteAlertOnCancel,
+                            onCancel: {
+                                setSelectedWeight(with: nil)
+                            },
                             message: { item in
                                 Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
                             }
@@ -125,7 +133,9 @@ struct WeightHistoryView: View {
                                 }
                                 
                                 save(data: weight)
-                                commit()
+                                if let err = weightStore.commit() {
+                                    vm.errorMessage = err
+                                }
                             }
                         case .edit(let data):
                             WeightSheet(id: data.id, onSave: nil)
@@ -138,7 +148,9 @@ struct WeightHistoryView: View {
                     data: $vm.weightToEdit,
                     type: .choice("Change"),
                     onConfirm: replaceAlertOnConfirm,
-                    onCancel: replaceAlertOnCancel,
+                    onCancel: {
+                        setSelectedWeight(with: nil)
+                    },
                     message: { item in
                         Text("Your item for today already exists. Would you like to replace the old one?")
                     }
@@ -173,7 +185,9 @@ extension WeightHistoryView {
                 save(data: data)
             }
             
-            commit()
+            if let errMessage = weightStore.commit() {
+                vm.errorMessage = errMessage
+            }
         } catch {
             // I know it's a silent error handling,
             // which is pointless,
@@ -183,8 +197,8 @@ extension WeightHistoryView {
         }
     }
     
-    fileprivate func replaceAlertOnCancel() {
-        vm.selectedWeight = nil
+    fileprivate func setSelectedWeight(with weight: Weight?) {
+        vm.selectedWeight = weight
     }
     
     fileprivate func deleteAlertOnConfirm() {
@@ -192,13 +206,11 @@ extension WeightHistoryView {
             let index = findIndex(id: data.id) else { return }
         
         delete(offsets: IndexSet(integer: index))
-        commit()
+        if let errMessage = weightStore.commit() {
+            vm.errorMessage = errMessage
+        }
         
-        vm.selectedWeight = nil
-    }
-    
-    fileprivate func deleteAlertOnCancel() {
-        vm.selectedWeight = nil
+        setSelectedWeight(with: nil)
     }
     
     fileprivate func findIndex(id: UUID) -> Int? {
@@ -225,25 +237,15 @@ extension WeightHistoryView {
     
     fileprivate func save(data: Weight) {
         withAnimation {
-            modelContext.insert(data)
+            weightStore.insert(data: data)
         }
     }
 
     fileprivate func delete(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(weights[index])
+                weightStore.delete(data: weights[index])
             }
-        }
-    }
-    
-    fileprivate func commit() {
-        do {
-            try modelContext.save()
-        } catch {
-            vm.errorMessage = error.localizedDescription
-            
-            return
         }
     }
     

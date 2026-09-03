@@ -18,6 +18,13 @@ struct CalendarService {
             CalendarService.ISO8601.calendar.timeZone = TimeZone.current
         }
         
+        internal static func getMidnightTime(for date: Date = .now) -> Date {
+            guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: date) else { return date }
+            let startOfDay = calendar.startOfDay(for: tomorrow)
+            
+            return startOfDay
+        }
+        
         internal static func getYear(of date: Date = Date.now) -> Int {
             return calendar.component(.year, from: date)
         }

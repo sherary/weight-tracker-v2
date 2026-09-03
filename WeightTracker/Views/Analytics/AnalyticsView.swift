@@ -8,7 +8,10 @@ struct AnalyticsView: View {
     @Query(sort: \Weight.date, order: .reverse) private var weightHistory: [Weight]
     @Environment(\.modelContext) private var modelContext
     @State private var vm = AnalyticsViewModel()
-
+    private var weightStore: WeightStore {
+        WeightStore(modelContext: modelContext)
+    }
+    
     var body: some View {
         VStack {
             InlineTitle(text: "Analytics") {}
@@ -76,7 +79,7 @@ struct AnalyticsView: View {
 
 extension AnalyticsView {
     private func reloadData() {
-        let fetchData = getItems()
+        let fetchData = weightStore.getItems(dateRange: vm.dateRange)
         
         switch fetchData {
         case .success(let data):
@@ -85,24 +88,6 @@ extension AnalyticsView {
             }
         case .failure(let err):
             vm.errorMessage = err.localizedDescription
-        }
-    }
-    
-    private func getItems() -> Result<[Weight]?, Error> {
-        let startDate = vm.dateRange.start
-        let endDate = vm.dateRange.end
-        
-        let descriptor = FetchDescriptor<Weight>(
-            predicate: #Predicate { $0.date >= startDate && $0.date < endDate },
-            sortBy: [SortDescriptor(\.date)]
-        )
-        
-        do {
-            let data = try modelContext.fetch(descriptor)
-            
-            return .success(data)
-        } catch {
-            return .failure(error)
         }
     }
 }

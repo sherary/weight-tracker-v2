@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 @Observable
 final class AnalyticsViewModel {
@@ -15,11 +14,17 @@ final class AnalyticsViewModel {
     internal private(set) var dateRange: DateInterval = .init(start: .now, duration: 0)
     internal private(set) var weights: [Weight]? {
         didSet {
-            if let weights = weights, !weights.isEmpty {
-                setChartPoints(with: weights)
-                setTotalWeight(from: weights)
-                setAverageWeight(from: totalWeight ?? 0, weights: weights)
+            guard let weights, !weights.isEmpty else {
+                chartPoints = nil
+                totalWeight = 0
+                averageWeight = 0
+                
+                return
             }
+            
+            setChartPoints(with: weights)
+            setTotalWeight(from: weights)
+            setAverageWeight(from: totalWeight ?? 0, weights: weights)
         }
     }
     

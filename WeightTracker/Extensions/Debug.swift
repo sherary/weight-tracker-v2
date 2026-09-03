@@ -1,7 +1,7 @@
 import SwiftData
 import Foundation
 
-#if DEBUG
+#if DEBUG && targetEnvironment(simulator)
 extension ModelContext {
     func deleteAllWeights() {
         do {
