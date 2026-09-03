@@ -3,11 +3,11 @@ import SwiftUI
 struct ChartTitle: View {
     var dateRange: DateInterval
     var text: String?
-    var period: DataFilter
+    var period: Period
     
     private var year: Int = 0
     
-    init(dateRange: DateInterval, period: DataFilter, text: String? = nil) {
+    init(dateRange: DateInterval, period: Period, text: String? = nil) {
         self.dateRange = dateRange
         self.period = period
         self.year = CalendarService.ISO8601.getYear(of: dateRange.end)

@@ -8,6 +8,10 @@ struct WeightHistoryView: View {
     @State private var vm = WeightHistoryViewModel()
     @State private var destinations: HistoryDestination? = nil
     
+    private var weightStore: WeightStore {
+        WeightStore(modelContext: modelContext)
+    }
+    
     // VIEW PROPS
     fileprivate typealias Symbol = (name: String, color: Color)
     fileprivate struct WeightRow: Identifiable {
@@ -55,57 +59,67 @@ struct WeightHistoryView: View {
                     }
                     .padding(.top, 32)
                     
-                    Picker("Filter", selection: $vm.selectedFilter) {
-                        ForEach(DataFilter.allCases, id: \.self) { filter in
+                    Picker("Filter", selection: $vm.period) {
+                        ForEach(Period.allCases, id: \.self) { filter in
                             Text(filter.title).tag(filter)
                         }
                     }
                     .pickerStyle(.segmented)
                     
-                    List {
-                        ForEach(rows) { row in
-                            let style = indicator(for: row.delta ?? 0)
-                            
-                            HistoryTableCell(
-                                data: row.weight,
-                                symbol: style.name,
-                                color: style.color,
-                                delta: row.delta ?? 0
-                            )
-                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                SwipableIcon(
-                                    symbol: "square.and.pencil",
-                                    tint: .blue,
-                                    onSave: {
-                                        editById(id: row.id)
-                                    }
+                    if !rows.isEmpty {
+                        List {
+                            ForEach(rows) { row in
+                                let style = indicator(for: row.delta ?? 0)
+                                
+                                HistoryTableCell(
+                                    data: row.weight,
+                                    symbol: style.name,
+                                    color: style.color,
+                                    delta: row.delta ?? 0
                                 )
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    SwipableIcon(
+                                        symbol: "square.and.pencil",
+                                        tint: .blue,
+                                        onSave: {
+                                            editById(id: row.id)
+                                        }
+                                    )
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    SwipableIcon(
+                                        symbol: "trash",
+                                        tint: .red,
+                                        onSave: {
+                                            if let item = getItem(by: row.id) {
+                                                setSelectedWeight(with: item)
+                                            }
+                                        }
+                                    )
+                                }
+                                .onTapGesture {
+                                    editById(id: row.id)
+                                }
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                SwipableIcon(
-                                    symbol: "trash",
-                                    tint: .red,
-                                    onSave: {
-                                        vm.selectedWeight = getItem(by: row.id)
-                                    }
-                                )
+                        }
+                        .listStyle(.plain)
+                        .multipleChoiceAlert(
+                            title: "Delete Item",
+                            data: $vm.selectedWeight,
+                            type: .delete,
+                            onConfirm: deleteAlertOnConfirm,
+                            onCancel: {
+                                setSelectedWeight(with: nil)
+                            },
+                            message: { item in
+                                Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
                             }
-                            .onTapGesture {
-                                editById(id: row.id)
-                            }
+                        )
+                    } else {
+                        EmptyListView {
+                            destinations = .add
                         }
                     }
-                    .listStyle(.plain)
-                    .multipleChoiceAlert(
-                        title: "Delete Item",
-                        data: $vm.selectedWeight,
-                        type: .delete,
-                        onConfirm: deleteAlertOnConfirm,
-                        onCancel: deleteAlertOnCancel,
-                        message: { item in
-                            Text("Are you sure you want to delete entry @\(item.date, format: .dateTime)?")
-                        }
-                    )
                 }
                 .sheet(item: $destinations) { destination in
                     Group {
@@ -119,7 +133,9 @@ struct WeightHistoryView: View {
                                 }
                                 
                                 save(data: weight)
-                                commit()
+                                if let err = weightStore.commit() {
+                                    vm.errorMessage = err
+                                }
                             }
                         case .edit(let data):
                             WeightSheet(id: data.id, onSave: nil)
@@ -132,7 +148,9 @@ struct WeightHistoryView: View {
                     data: $vm.weightToEdit,
                     type: .choice("Change"),
                     onConfirm: replaceAlertOnConfirm,
-                    onCancel: replaceAlertOnCancel,
+                    onCancel: {
+                        setSelectedWeight(with: nil)
+                    },
                     message: { item in
                         Text("Your item for today already exists. Would you like to replace the old one?")
                     }
@@ -167,7 +185,9 @@ extension WeightHistoryView {
                 save(data: data)
             }
             
-            commit()
+            if let errMessage = weightStore.commit() {
+                vm.errorMessage = errMessage
+            }
         } catch {
             // I know it's a silent error handling,
             // which is pointless,
@@ -177,8 +197,8 @@ extension WeightHistoryView {
         }
     }
     
-    fileprivate func replaceAlertOnCancel() {
-        vm.selectedWeight = nil
+    fileprivate func setSelectedWeight(with weight: Weight?) {
+        vm.selectedWeight = weight
     }
     
     fileprivate func deleteAlertOnConfirm() {
@@ -186,13 +206,11 @@ extension WeightHistoryView {
             let index = findIndex(id: data.id) else { return }
         
         delete(offsets: IndexSet(integer: index))
-        commit()
+        if let errMessage = weightStore.commit() {
+            vm.errorMessage = errMessage
+        }
         
-        vm.selectedWeight = nil
-    }
-    
-    fileprivate func deleteAlertOnCancel() {
-        vm.selectedWeight = nil
+        setSelectedWeight(with: nil)
     }
     
     fileprivate func findIndex(id: UUID) -> Int? {
@@ -219,25 +237,15 @@ extension WeightHistoryView {
     
     fileprivate func save(data: Weight) {
         withAnimation {
-            modelContext.insert(data)
+            weightStore.insert(data: data)
         }
     }
 
     fileprivate func delete(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(weights[index])
+                weightStore.delete(data: weights[index])
             }
-        }
-    }
-    
-    fileprivate func commit() {
-        do {
-            try modelContext.save()
-        } catch {
-            vm.errorMessage = error.localizedDescription
-            
-            return
         }
     }
     

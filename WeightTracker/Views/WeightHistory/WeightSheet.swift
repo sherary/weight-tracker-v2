@@ -42,7 +42,7 @@ struct WeightSheet: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(.mint, lineWidth: 0.8)
+                            .stroke(.blue, lineWidth: 0.8)
                     )
             }
             .padding(.bottom, 24)
@@ -59,7 +59,7 @@ struct WeightSheet: View {
                         .padding()
                         .background(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(.mint, lineWidth: 0.8)
+                                .stroke(.blue, lineWidth: 0.8)
                         )
                 }
                 .zIndex(0)
@@ -96,7 +96,7 @@ struct WeightSheet: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(.mint)
+                            .fill(.blue)
                     )
             }
             .disabled(data.value.isNaN)

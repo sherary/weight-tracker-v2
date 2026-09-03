@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct RootView: View {
     @State private var selectedTab: Int = 0
@@ -6,7 +7,9 @@ struct RootView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Analytics", systemImage: "cellularbars", value: 0) {
-                AnalyticsView()
+                AnalyticsView(onEmptyView: {
+                    selectedTab = 1
+                })
             }
             
             Tab("Histories", systemImage: "list.bullet", value: 1) {
@@ -18,4 +21,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
+        .modelContainer(for: Weight.self, inMemory: false)
 }

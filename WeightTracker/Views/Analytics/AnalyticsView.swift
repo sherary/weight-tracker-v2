@@ -3,48 +3,55 @@ import SwiftData
 import Charts
 
 struct AnalyticsView: View {
+    var onEmptyView: (() -> Void)?
+    
     @Query(sort: \Weight.date, order: .reverse) private var weightHistory: [Weight]
     @Environment(\.modelContext) private var modelContext
     @State private var vm = AnalyticsViewModel()
-
+    private var weightStore: WeightStore {
+        WeightStore(modelContext: modelContext)
+    }
+    
     var body: some View {
         VStack {
             InlineTitle(text: "Analytics") {}
                 .padding(.top, 32)
 
-            Picker("Filter", selection: $vm.selectedFilter) {
-                ForEach(DataFilter.allCases, id: \.self) { filter in
+            Picker("Filter", selection: $vm.period) {
+                ForEach(Period.allCases, id: \.self) { filter in
                     Text(filter.title).tag(filter)
                 }
             }
             .pickerStyle(.segmented)
             
-            Card(spacing: 24) {
-                if vm.dateRange != DateInterval(start: .now, end: .now) {
+            if let chartPoints = vm.chartPoints {
+                Card(spacing: 24) {
                     ChartTitle(
                         dateRange: vm.dateRange,
-                        period: vm.selectedFilter
+                        period: vm.period
+                    )
+                    
+                    BarChart(
+                        data: chartPoints,
+                        period: vm.period
                     )
                 }
                 
-                if let chartPoints = vm.chartPoints,
-                    !chartPoints.isEmpty
-                {
-                    BarChart(
-                        data: chartPoints,
-                        period: vm.selectedFilter
-                    )
+                MetricsCard(
+                    total: vm.totalWeight ?? 0,
+                    average: vm.averageWeight ?? 0
+                )
+            } else {
+                EmptyAnalyticsView {
+                    if let onEmptyView = onEmptyView {
+                        onEmptyView()
+                    }
                 }
             }
             
-            MetricsCard(
-                total: vm.totalWeight ?? 0,
-                average: vm.averageWeight ?? 0
-            )
-            
             Spacer()
             
-            #if DEBUG
+            #if DEBUG && targetEnvironment(simulator)
             HStack(alignment: .center) {
                 Button("Seed") {
                     modelContext.seedYearOfWeights()
@@ -72,7 +79,7 @@ struct AnalyticsView: View {
 
 extension AnalyticsView {
     private func reloadData() {
-        let fetchData = getItems()
+        let fetchData = weightStore.getItems(dateRange: vm.dateRange)
         
         switch fetchData {
         case .success(let data):
@@ -81,24 +88,6 @@ extension AnalyticsView {
             }
         case .failure(let err):
             vm.errorMessage = err.localizedDescription
-        }
-    }
-    
-    private func getItems() -> Result<[Weight]?, Error> {
-        let startDate = vm.dateRange.start
-        let endDate = vm.dateRange.end
-        
-        let descriptor = FetchDescriptor<Weight>(
-            predicate: #Predicate { $0.date >= startDate && $0.date < endDate },
-            sortBy: [SortDescriptor(\.date)]
-        )
-        
-        do {
-            let data = try modelContext.fetch(descriptor)
-            
-            return .success(data)
-        } catch {
-            return .failure(error)
         }
     }
 }
