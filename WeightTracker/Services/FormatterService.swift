@@ -19,5 +19,11 @@ struct FormatterService {
             
             return formatter
         }()
+        
+        static let widgetShort: DateFormatter = {
+            formatter.dateFormat = "MMM dd - YYYY"
+            
+            return formatter
+        }()
     }
 }

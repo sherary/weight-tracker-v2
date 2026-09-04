@@ -5,89 +5,174 @@ import SwiftData
 
 struct WeightTrackerWidgetView : View {
     var entry: WeightTrackerWidgetEntry
+    @Environment(\.widgetFamily) private var widgetFamily
 
     var body: some View {
-        if entry.size == .systemMedium {
-            VStack(alignment: .center) {
-                Text("Add new record for today's weight")
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                
+        Group {
+            if widgetFamily == .systemMedium {
                 HStack(alignment: .center) {
-                    Button(intent: AdjustWeightIntent(delta: -0.1)) {
-                        Image(systemName: "minus")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 16, height: 16, alignment: .center)
+                    VStack(alignment: .leading) {
+                        Text("Daily Weight Tracker")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        
+                        Text(entry.date, formatter: FormatterService.Date.widgetShort)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.primary)
+                        
+                        
+                        Spacer()
                     }
                     
-                    Text(entry.value, format: .number.precision(.fractionLength(2)))
-                        .font(.title)
-                        .foregroundStyle(.primary)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(.gray, lineWidth: 1)
-                        )
+                    Spacer()
                     
-                    Button(intent: AdjustWeightIntent(delta: 0.1)) {
-                        Image(systemName: "plus")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 16, height: 16, alignment: .center)
+                    VStack {
+                        HStack {
+                            Text(entry.value, format: .number.precision(.fractionLength(2)))
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(.primary)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(.gray, lineWidth: 1)
+                                )
+                        }
+                        
+                        HStack(alignment: .center, spacing: 8) {
+                            Button(intent: AdjustWeightIntent(delta: -0.1)) {
+                                Image(systemName: "minus")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 16, height: 16)
+                            }
+                            .buttonStyle(.borderless)
+                            
+                            Spacer()
+
+                            Button(intent: AdjustWeightIntent(delta: 0.1)) {
+                                Image(systemName: "plus")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 16, height: 16)
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                    }
+                    
+                    Text("kg")
+                        .foregroundStyle(.secondary)
+                        .font(.body)
+                }
+            } else {
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading) {
+                        HStack(alignment: .center) {
+                            Text(entry.date, formatter: FormatterService.Date.shortMonth)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.primary)
+                            
+                            Spacer()
+                        }
+                        
+                        HStack(alignment: .center) {
+                            Text(entry.date, format: .dateTime.year())
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            
+                            Spacer()
+                        }
+                        
+                        HStack(alignment: .center) {
+                            Text(entry.value, format: .number.precision(.fractionLength(2)))
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(.gray, lineWidth: 1)
+                                )
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.primary)
+                            
+                            Text("kg")
+                                .foregroundStyle(.secondary)
+                                .font(.body)
+                        }
+                        .padding(.vertical, 12)
+                        
+                        Text("Daily Weight Tracker")
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(1)
+                            .font(.system(size: 8, weight: .semibold))
+                    }
+                    
+                    VStack(alignment: .center, spacing: 32) {
+                        Button(intent: AdjustWeightIntent(delta: -0.1)) {
+                            Image(systemName: "chevron.up")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                        }
+                        .buttonStyle(.borderless)
+                        
+                        Spacer()
+
+                        Button(intent: AdjustWeightIntent(delta: 0.1)) {
+                            Image(systemName: "chevron.down")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 16, height: 16)
+                        }
+                        .buttonStyle(.borderless)
                     }
                 }
-                
-                Text("kg")
             }
-            .containerBackground(.fill.tertiary, for: .widget)
         }
+        .containerBackground(.fill.tertiary, for: .widget)
     }
 }
 
 struct WeightTrackerWidgetEntry: TimelineEntry {
     var date: Date
     var value: Double
-    var size: WidgetFamily? = .systemMedium
 }
 
-struct WeightTrackerTimelineProvider: AppIntentTimelineProvider {
+struct WeightTrackerTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> WeightTrackerWidgetEntry {
         WeightTrackerWidgetEntry(date: .now, value: 0)
     }
     
-    func snapshot(for configuration: WeightTrackerWidgetConfiguration, in context: Context) async -> WeightTrackerWidgetEntry {
-        WeightTrackerWidgetEntry(date: .now, value: 0.5)
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
+        let entry = WeightTrackerWidgetEntry(date: .now, value: WidgetStore.value)
+        
+        completion(entry)
     }
     
-    func timeline(for configuration: WeightTrackerWidgetConfiguration, in context: Context) async -> Timeline<WeightTrackerWidgetEntry> {
-        let modelContext = ModelContext(PersistenceController.sharedModelContainerV2)
-        let store = WeightStore(modelContext: modelContext)
-        var entry = WeightTrackerWidgetEntry(date: .now, value: 0)
-        if let lastWeight = store.lastRecord {
-            entry.date = .now
-            entry.value = lastWeight.value
-        }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<WeightTrackerWidgetEntry>) -> Void) {
+        let entry = WeightTrackerWidgetEntry(date: .now, value: WidgetStore.value)
         
-        let midnight = CalendarService.ISO8601.getMidnightTime(for: .now)
-        return Timeline(entries: [entry], policy: .after(midnight))
+        let timeline = Timeline(
+            entries: [entry],
+            policy: .never
+        )
+        
+        completion(timeline)
     }
 }
 
 struct WeightTrackerWidget: Widget {
-    let kind: String = "WeightTrackerWidget"
+    let kind: String = WidgetConfigs.kind
     
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(
+        StaticConfiguration(
             kind: kind,
-            intent: WeightTrackerWidgetConfiguration.self,
             provider: WeightTrackerTimelineProvider()
-        ) {
-            entry in
+        ) { entry in
             WeightTrackerWidgetView(entry: entry)
         }
+        .configurationDisplayName("Weight Tracker Widget")
+        .description("Daily record of your weight")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

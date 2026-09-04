@@ -8,6 +8,7 @@ final class WeightStore {
         self.modelContext = modelContext
         self.setLastRecord()
     }
+    
     internal private(set) var lastRecord: Weight?
     
     internal func getItems(dateRange: DateInterval) -> Result<[Weight]?, Error> {
@@ -34,7 +35,7 @@ final class WeightStore {
         
         var descriptor = FetchDescriptor<Weight>(
             predicate: #Predicate { $0.date >= startDate && $0.date < endDate },
-            sortBy: [SortDescriptor(\.date)]
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
         
         descriptor.fetchLimit = 1
@@ -48,6 +49,29 @@ final class WeightStore {
         }
     }
     
+    internal func upsert(data: Weight) {
+        let targetDate = Calendar.current.startOfDay(for: data.date)
+        var descriptor = FetchDescriptor<Weight>(
+            predicate: #Predicate { $0.date == targetDate }
+        )
+        descriptor.fetchLimit = 1
+        
+        do {
+            let fetchItem = try modelContext.fetch(descriptor)
+            if let existingData = fetchItem.first {
+                existingData.value = data.value
+            } else {
+                modelContext.insert(data)
+            }
+            
+           try modelContext.save()
+        } catch {
+            print(error.localizedDescription)
+            
+            modelContext.rollback()
+        }
+    }
+    
     internal func insert(data: Weight) {
         modelContext.insert(data)
     }
@@ -58,6 +82,7 @@ final class WeightStore {
             
             return nil
         } catch {
+            modelContext.rollback()
             return error.localizedDescription
         }
     }
