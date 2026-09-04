@@ -108,7 +108,7 @@ struct WeightTrackerWidgetView : View {
                     }
                     
                     VStack(alignment: .center, spacing: 32) {
-                        Button(intent: AdjustWeightIntent(delta: -0.1)) {
+                        Button(intent: AdjustWeightIntent(delta: 0.1)) {
                             Image(systemName: "chevron.up")
                                 .resizable()
                                 .scaledToFit()
@@ -118,7 +118,7 @@ struct WeightTrackerWidgetView : View {
                         
                         Spacer()
 
-                        Button(intent: AdjustWeightIntent(delta: 0.1)) {
+                        Button(intent: AdjustWeightIntent(delta: -0.1)) {
                             Image(systemName: "chevron.down")
                                 .resizable()
                                 .scaledToFit()
@@ -140,7 +140,7 @@ struct WeightTrackerWidgetEntry: TimelineEntry {
 
 struct WeightTrackerTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> WeightTrackerWidgetEntry {
-        WeightTrackerWidgetEntry(date: .now, value: 0)
+        WeightTrackerWidgetEntry(date: .now, value: WidgetStore.value)
     }
     
     func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
