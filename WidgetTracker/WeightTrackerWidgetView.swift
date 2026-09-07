@@ -9,35 +9,29 @@ struct WeightTrackerWidgetView : View {
     var body: some View {
         Group {
             if widgetFamily == .systemMedium {
-                HStack(alignment: .center) {
-                    VStack(alignment: .leading) {
+                VStack(alignment: .leading) {
+                    HStack(alignment: .center) {
                         Text("Daily Weight Tracker")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                        
+                    }
+                    
+                    HStack(alignment: .center) {
                         Text(entry.date, formatter: FormatterService.Date.widgetShort)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(.primary)
                         
-                        
                         Spacer()
+                        
+                        Text("in kg")
+                            .foregroundStyle(.secondary)
+                            .font(.footnote)
                     }
                     
-                    Spacer()
-                    
-                    VStack {
-                        HStack {
-                            Text(entry.value, format: .number.precision(.fractionLength(2)))
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(.primary)
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(.gray, lineWidth: 1)
-                                )
-                        }
-                        
-                        HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .center) {
+                        HStack(alignment: .bottom, spacing: 32) {
+                            Spacer()
+                            
                             Button(intent: AdjustWeightIntent(delta: -0.1)) {
                                 Image(systemName: "minus")
                                     .resizable()
@@ -46,8 +40,15 @@ struct WeightTrackerWidgetView : View {
                             }
                             .buttonStyle(.borderless)
                             
-                            Spacer()
-
+                            Text(entry.value, format: .number.precision(.fractionLength(2)))
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(.primary)
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(.gray, lineWidth: 1)
+                                )
+                            
                             Button(intent: AdjustWeightIntent(delta: 0.1)) {
                                 Image(systemName: "plus")
                                     .resizable()
@@ -55,14 +56,11 @@ struct WeightTrackerWidgetView : View {
                                     .frame(width: 16, height: 16)
                             }
                             .buttonStyle(.borderless)
+                            
+                            Spacer()
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 8)
                     }
-                    
-                    Text("kg")
-                        .foregroundStyle(.secondary)
-                        .font(.body)
+                    .padding(.top, 10)
                 }
             } else {
                 HStack(alignment: .center) {
@@ -130,4 +128,11 @@ struct WeightTrackerWidgetView : View {
         }
         .containerBackground(.fill.tertiary, for: .widget)
     }
+}
+
+#Preview(as: .systemMedium) {
+    WeightTrackerWidget()
+} timeline: {
+    WeightTrackerWidgetEntry(date: .now, value: 56.5)
+    WeightTrackerWidgetEntry(date: .now, value: 56.1)
 }

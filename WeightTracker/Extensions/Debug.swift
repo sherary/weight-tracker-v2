@@ -7,6 +7,9 @@ extension ModelContext {
         do {
             try delete(model: Weight.self)
             try save()
+            
+            guard let defaults = UserDefaults(suiteName: WidgetConfigs.groupName) else { return }
+            defaults.removeObject(forKey: WidgetConfigs.stepperKey)
         } catch {
             print("delete failed:", error)
         }

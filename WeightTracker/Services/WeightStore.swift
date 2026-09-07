@@ -9,16 +9,7 @@ final class WeightStore {
     }
     
     internal var lastRecord: Weight? {
-        guard let dateRange = CalendarService.ISO8601.getDailyDateRange() else {
-            return nil
-        }
-        
-        let item = getOne(for: dateRange)
-        
-        switch item {
-        case .success(let data): return data
-        case .failure: return nil
-        }
+        return getAvailable()
     }
     
     internal func getItems(dateRange: DateInterval) -> Result<[Weight]?, Error> {
@@ -56,24 +47,77 @@ final class WeightStore {
         }
     }
     
-    internal func getOne(for dateRange: DateInterval) -> Result<Weight?, Error> {
-        let startDate = dateRange.start
-        let endDate = dateRange.end
+    internal func getAvailable(by period: Period? = nil) -> Weight {
+        var date = Date()
+        var dateRange = DateInterval()
         
+        if let period = period {
+            switch period {
+            case .weekly:
+                if let weeklyRange = CalendarService.ISO8601.getWeeklyDateRange(for: date) {
+                    dateRange = weeklyRange
+                }
+                
+                guard let item = getWeight(by: dateRange) else {
+                    return getAvailable(by: .monthly)
+                }
+                
+                return item
+            case .monthly:
+                if let monthlyRange = CalendarService.ISO8601.getMonthlyDateRange(for: date) {
+                    dateRange = monthlyRange
+                }
+                
+                guard let item = getWeight(by: dateRange) else {
+                    return getAvailable(by: .yearly)
+                }
+                
+                return item
+            case .yearly:
+                if let yearlyRange = CalendarService.ISO8601.getYearlyDateRange(for: date) {
+                    dateRange = yearlyRange
+                }
+                
+                guard let item = getWeight(by: dateRange) else {
+                    return AppConfigs.initialData
+                }
+                
+                return item
+            }
+        } else {
+            if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date) {
+                date = yesterday
+            }
+            
+            if let dailyRange = CalendarService.ISO8601.getDailyDateRange(for: date) {
+                dateRange = dailyRange
+            }
+            
+            guard let item = getWeight(by: dateRange) else {
+                return getAvailable(by: .weekly)
+            }
+            
+            return item
+        }
+    }
+    
+    internal func getWeight(by dateRange: DateInterval) -> Weight? {
+        if let item = try? fetchWeight(from: dateRange.start, to: dateRange.end) {
+            return item
+        }
+        
+        return nil
+    }
+    
+    internal func fetchWeight(from startDate: Date, to endDate: Date) throws -> Weight? {
         var descriptor = FetchDescriptor<Weight>(
-            predicate: #Predicate { $0.date >= startDate && $0.date < endDate },
+            predicate: #Predicate<Weight> { $0.date >= startDate && $0.date < endDate },
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
         
         descriptor.fetchLimit = 1
         
-        do {
-            let data = try modelContext.fetch(descriptor)
-            
-            return .success(data.first)
-        } catch {
-            return .failure(error)
-        }
+        return try modelContext.fetch(descriptor).first
     }
     
     internal func upsert(data: Weight) {
