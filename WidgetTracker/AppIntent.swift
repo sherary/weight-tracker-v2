@@ -20,7 +20,7 @@ struct AdjustWeightIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         var compoundingValue: Double = WidgetStore.value
         compoundingValue += self.delta
-        
+        print("compounding", compoundingValue)
         let modelContext = ModelContext(PersistenceController.sharedModelContainerV2)
         let weightStore = WeightStore(modelContext: modelContext)
         
@@ -29,7 +29,7 @@ struct AdjustWeightIntent: AppIntent {
         
         WidgetStore.set(value: compoundingValue)
         WidgetCenter.shared.reloadTimelines(ofKind: WidgetConfigs.kind)
-        
+        print("store", WidgetStore.value)
         return .result()
     }
 }

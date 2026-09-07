@@ -47,8 +47,18 @@ enum Period: Int, CaseIterable {
     }
 }
 
+enum RecursiveFetch {
+    case today, yesterday, thisWeek, thisMonth, thisYear
+}
+
 enum WidgetConfigs {
     static let groupName = "group.com.ashe-elea.WeightTracker"
     static let kind = "WeightTrackerWidget"
     static let stepperKey = "weight_stepper_value"
+}
+
+enum AppConfigs {
+    static let initialWeight = 50.0
+    static let initialDate = Date()
+    static let initialData = Weight(value: initialWeight, date: initialDate)
 }
