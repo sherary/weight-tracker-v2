@@ -23,6 +23,7 @@ struct AdjustWeightIntent: AppIntent {
         
         let modelContext = ModelContext(PersistenceController.sharedModelContainerV2)
         let weightStore = WeightStore(modelContext: modelContext)
+        
         let data = Weight(value: compoundingValue, date: .now)
         weightStore.upsert(data: data)
         

@@ -6,10 +6,20 @@ final class WeightStore {
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
-        self.setLastRecord()
     }
     
-    internal private(set) var lastRecord: Weight?
+    internal var lastRecord: Weight? {
+        guard let dateRange = CalendarService.ISO8601.getDailyDateRange() else {
+            return nil
+        }
+        
+        let item = getOne(for: dateRange)
+        
+        switch item {
+        case .success(let data): return data
+        case .failure: return nil
+        }
+    }
     
     internal func getItems(dateRange: DateInterval) -> Result<[Weight]?, Error> {
         let startDate = dateRange.start
@@ -26,6 +36,23 @@ final class WeightStore {
             return .success(data)
         } catch {
             return .failure(error)
+        }
+    }
+    
+    internal func getBy(id: UUID) -> Weight? {
+        var descriptor = FetchDescriptor<Weight>(
+            predicate: #Predicate { $0.id == id },
+            sortBy: [SortDescriptor(\.date, order: .reverse)]
+        )
+        
+        descriptor.fetchLimit = 1
+        
+        do {
+            let data = try modelContext.fetch(descriptor)
+            
+            return data.first
+        } catch {
+            return nil
         }
     }
     
@@ -89,19 +116,6 @@ final class WeightStore {
     
     internal func delete(data: Weight) {
         modelContext.delete(data)
-    }
-    
-    private func setLastRecord() {
-        guard let dateRange = CalendarService.ISO8601.getMonthlyDateRange() else { return }
-        let item = getOne(for: dateRange)
-        
-        switch item {
-        case .success(let data):
-            if let data = data {
-                self.lastRecord = data
-            }
-        case .failure: return
-        }
     }
 }
 

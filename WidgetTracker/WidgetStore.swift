@@ -2,8 +2,8 @@ import Foundation
 import SwiftData
 
 final class WidgetStore {
-    static let key = WidgetConfigs.stepperKey
     static let suiteName = WidgetConfigs.groupName
+    static let key = WidgetConfigs.stepperKey
     
     static var value: Double {
         guard let defaults = UserDefaults(suiteName: suiteName) else {

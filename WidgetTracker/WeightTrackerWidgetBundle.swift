@@ -2,7 +2,7 @@ import WidgetKit
 import SwiftUI
 
 @main
-struct WidgetTrackerBundle: WidgetBundle {
+struct WeightTrackerWidgetBundle: WidgetBundle {
     var body: some Widget {
         WeightTrackerWidget()
     }

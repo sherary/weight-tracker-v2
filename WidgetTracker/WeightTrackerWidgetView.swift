@@ -1,7 +1,6 @@
+import SwiftUI
 import WidgetKit
 import AppIntents
-import SwiftUI
-import SwiftData
 
 struct WeightTrackerWidgetView : View {
     var entry: WeightTrackerWidgetEntry
@@ -108,7 +107,7 @@ struct WeightTrackerWidgetView : View {
                     }
                     
                     VStack(alignment: .center, spacing: 32) {
-                        Button(intent: AdjustWeightIntent(delta: -0.1)) {
+                        Button(intent: AdjustWeightIntent(delta: 0.1)) {
                             Image(systemName: "chevron.up")
                                 .resizable()
                                 .scaledToFit()
@@ -118,7 +117,7 @@ struct WeightTrackerWidgetView : View {
                         
                         Spacer()
 
-                        Button(intent: AdjustWeightIntent(delta: 0.1)) {
+                        Button(intent: AdjustWeightIntent(delta: -0.1)) {
                             Image(systemName: "chevron.down")
                                 .resizable()
                                 .scaledToFit()
@@ -131,55 +130,4 @@ struct WeightTrackerWidgetView : View {
         }
         .containerBackground(.fill.tertiary, for: .widget)
     }
-}
-
-struct WeightTrackerWidgetEntry: TimelineEntry {
-    var date: Date
-    var value: Double
-}
-
-struct WeightTrackerTimelineProvider: TimelineProvider {
-    func placeholder(in context: Context) -> WeightTrackerWidgetEntry {
-        WeightTrackerWidgetEntry(date: .now, value: 0)
-    }
-    
-    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-        let entry = WeightTrackerWidgetEntry(date: .now, value: WidgetStore.value)
-        
-        completion(entry)
-    }
-    
-    func getTimeline(in context: Context, completion: @escaping (Timeline<WeightTrackerWidgetEntry>) -> Void) {
-        let entry = WeightTrackerWidgetEntry(date: .now, value: WidgetStore.value)
-        
-        let timeline = Timeline(
-            entries: [entry],
-            policy: .never
-        )
-        
-        completion(timeline)
-    }
-}
-
-struct WeightTrackerWidget: Widget {
-    let kind: String = WidgetConfigs.kind
-    
-    var body: some WidgetConfiguration {
-        StaticConfiguration(
-            kind: kind,
-            provider: WeightTrackerTimelineProvider()
-        ) { entry in
-            WeightTrackerWidgetView(entry: entry)
-        }
-        .configurationDisplayName("Weight Tracker Widget")
-        .description("Daily record of your weight")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-#Preview(as: .systemMedium) {
-    WeightTrackerWidget()
-} timeline: {
-    WeightTrackerWidgetEntry(date: .now, value: 56.5)
-    WeightTrackerWidgetEntry(date: .now, value: 56.1)
 }
