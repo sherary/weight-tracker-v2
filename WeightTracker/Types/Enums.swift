@@ -50,5 +50,5 @@ enum Period: Int, CaseIterable {
 enum WidgetConfigs {
     static let groupName = "group.com.ashe-elea.WeightTracker"
     static let kind = "WeightTrackerWidget"
-    static let stepperKey = "weight_stepper"
+    static let stepperKey = "weight_stepper_value"
 }

@@ -29,6 +29,15 @@ struct CalendarService {
             return calendar.component(.year, from: date)
         }
         
+        internal static func getDailyDateRange(for date: Date = .now) -> DateInterval? {
+            let start = calendar.startOfDay(for: date)
+            
+            guard let end = calendar.date(byAdding: .init(day: 1, second: -1), to: start)
+                else { return DateInterval(start: start, duration: 0) }
+            
+            return DateInterval(start: start, end: end)
+        }
+        
         internal static func getWeeklyDateRange(for date: Date = Date.now) -> DateInterval? {
             guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: date),
                   let weekEnd = calendar.date(byAdding: .second, value: -1, to: weekStart.end)
