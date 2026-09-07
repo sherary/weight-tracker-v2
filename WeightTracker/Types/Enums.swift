@@ -47,6 +47,10 @@ enum Period: Int, CaseIterable {
     }
 }
 
+enum RecursiveFetch {
+    case today, yesterday, thisWeek, thisMonth, thisYear
+}
+
 enum WidgetConfigs {
     static let groupName = "group.com.ashe-elea.WeightTracker"
     static let kind = "WeightTrackerWidget"

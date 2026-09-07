@@ -47,44 +47,22 @@ final class WeightStore {
         }
     }
     
-    internal func getAvailable(by period: Period? = nil) -> Weight {
+    internal func getAvailable(by period: RecursiveFetch = .today) -> Weight {
         var date = Date()
         var dateRange = DateInterval()
         
-        if let period = period {
-            switch period {
-            case .weekly:
-                if let weeklyRange = CalendarService.ISO8601.getWeeklyDateRange(for: date) {
-                    dateRange = weeklyRange
-                }
-                
-                guard let item = getWeight(by: dateRange) else {
-                    return getAvailable(by: .monthly)
-                }
-                
-                return item
-            case .monthly:
-                if let monthlyRange = CalendarService.ISO8601.getMonthlyDateRange(for: date) {
-                    dateRange = monthlyRange
-                }
-                
-                guard let item = getWeight(by: dateRange) else {
-                    return getAvailable(by: .yearly)
-                }
-                
-                return item
-            case .yearly:
-                if let yearlyRange = CalendarService.ISO8601.getYearlyDateRange(for: date) {
-                    dateRange = yearlyRange
-                }
-                
-                guard let item = getWeight(by: dateRange) else {
-                    return AppConfigs.initialData
-                }
-                
-                return item
+        switch period {
+        case .today:
+            if let dailyRange = CalendarService.ISO8601.getDailyDateRange(for: date) {
+                dateRange = dailyRange
             }
-        } else {
+            
+            guard let item = getWeight(by: dateRange) else {
+                return getAvailable(by: .yesterday)
+            }
+            
+            return item
+        case .yesterday:
             if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date) {
                 date = yesterday
             }
@@ -94,7 +72,37 @@ final class WeightStore {
             }
             
             guard let item = getWeight(by: dateRange) else {
-                return getAvailable(by: .weekly)
+                return getAvailable(by: .yesterday)
+            }
+            
+            return item
+        case .thisWeek:
+            if let weeklyRange = CalendarService.ISO8601.getWeeklyDateRange(for: date) {
+                dateRange = weeklyRange
+            }
+            
+            guard let item = getWeight(by: dateRange) else {
+                return getAvailable(by: .thisMonth)
+            }
+            
+            return item
+        case .thisMonth:
+            if let monthlyRange = CalendarService.ISO8601.getMonthlyDateRange(for: date) {
+                dateRange = monthlyRange
+            }
+            
+            guard let item = getWeight(by: dateRange) else {
+                return getAvailable(by: .thisYear)
+            }
+            
+            return item
+        case .thisYear:
+            if let yearlyRange = CalendarService.ISO8601.getYearlyDateRange(for: date) {
+                dateRange = yearlyRange
+            }
+            
+            guard let item = getWeight(by: dateRange) else {
+                return AppConfigs.initialData
             }
             
             return item
