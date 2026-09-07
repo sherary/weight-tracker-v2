@@ -30,23 +30,6 @@ final class WeightStore {
         }
     }
     
-    internal func getBy(id: UUID) -> Weight? {
-        var descriptor = FetchDescriptor<Weight>(
-            predicate: #Predicate { $0.id == id },
-            sortBy: [SortDescriptor(\.date, order: .reverse)]
-        )
-        
-        descriptor.fetchLimit = 1
-        
-        do {
-            let data = try modelContext.fetch(descriptor)
-            
-            return data.first
-        } catch {
-            return nil
-        }
-    }
-    
     internal func getAvailable(by period: RecursiveFetch = .today) -> Weight {
         var date = Date()
         var dateRange = DateInterval()
@@ -110,11 +93,7 @@ final class WeightStore {
     }
     
     internal func getWeight(by dateRange: DateInterval) -> Weight? {
-        if let item = try? fetchWeight(from: dateRange.start, to: dateRange.end) {
-            return item
-        }
-        
-        return nil
+        return try? fetchWeight(from: dateRange.start, to: dateRange.end)
     }
     
     internal func fetchWeight(from startDate: Date, to endDate: Date) throws -> Weight? {
