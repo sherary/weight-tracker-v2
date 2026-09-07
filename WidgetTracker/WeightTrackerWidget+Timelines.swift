@@ -32,11 +32,8 @@ struct WeightTrackerAppIntentTimelineProvider: AppIntentTimelineProvider {
             date: .now,
             value: WidgetStore.value,
         )
+        let nextMidnight = CalendarService.ISO8601.getNextMidnightTime()
         
-        if let date = Calendar.current.date(byAdding: .second, value: 1, to: entry.date) {
-            return Timeline(entries: [entry], policy: .after(date))
-        }
-        
-        return Timeline(entries: [entry], policy: .atEnd)
+        return Timeline(entries: [entry], policy: .after(nextMidnight))
     }
 }

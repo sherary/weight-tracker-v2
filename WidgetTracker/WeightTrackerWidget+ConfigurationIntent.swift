@@ -13,7 +13,7 @@ struct WeightTrackerWidgetConfigurationIntent: WidgetConfigurationIntent {
     
     private func setValue() {
         guard let initialWeightData = getValue() else { return }
-        print("initial", initialWeightData.value, initialWeightData.date)
+        
         self.value = initialWeightData.value
         WidgetStore.set(value: value)
     }
